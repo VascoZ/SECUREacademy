@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from werkzeug.security import generate_password_hash
 from config import Config
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__, template_folder='../templates')
 app.static_folder = '../static'
@@ -12,6 +13,8 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+csrf = CSRFProtect(app)
+
 
 from app import models, views, controllers
 from app.controllers import main_controller, auth_controller, questions_controller
