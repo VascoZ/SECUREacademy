@@ -1,0 +1,22 @@
+<!-- templates/index.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}SECURE Academy{% endblock %}
+
+{% block content %}
+
+    <div class="container mt-5">
+        <div class="text-center">
+            <!-- Centered logo image -->
+            <img src="{{ url_for('static', filename='images/logo_img.png') }}" alt="Logo Image" class="img-fluid mx-auto d-block" style="max-height: 200px;">
+
+            <!-- Centered logo text image -->
+            <img src="{{ url_for('static', filename='images/logo_text.png') }}" alt="Logo Text" class="img-fluid mx-auto d-block" style="max-height: 100px;">
+
+            <!-- Description -->
+            <p class="lead mt-4">Welcome to SECURE Academy: Sanapati Education for Code Understanding and Reinforcement, where we empower learners with the knowledge and skills to understand and reinforce code security. Our mission is to provide a secure learning environment for web security enthusiasts. Join us on a journey of learning and mastering the art of securing web applications.</p>
+        </div>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,345 @@
+<!-- templates/solve_question.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Solve Question{% endblock %}
+
+{% block content %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css" integrity="sha512-cglMadHaO/jAvqEM51bUj/saVbUkZwVa4PX0bcpWVlND3OrPpYcS/91uhIrgHrXmikanebYApd7UWjbDGEQUqg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        .chatdiv {
+            display: flex; 
+            justify-content: end; 
+            flex-flow: column; 
+            position: fixed; 
+            bottom: 80px; 
+            right: 200px; 
+            height: 500px; 
+            width: 330px; 
+            z-index: 1000;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        .chat-bubble {
+            margin-top: 5px;
+            display: flex; 
+            align-items: end;
+        }
+
+        .chat-bubble-bot {
+            background-color: #3498db; /* Blue background color */
+            border-radius: 30px 30px 0px 30px; /* Rounded corners (top-left, top-right, bottom-left) and sharp bottom-right */
+            padding: 15px;
+            color: white;
+            width: 100%; 
+        }
+        
+        .chat-bubble-user {
+            background-color: rgb(182, 182, 182); /* Blue background color */
+            border-radius: 30px 30px 30px 0px; /* Rounded corners (top-left, top-right, bottom-left) and sharp bottom-right */
+            padding: 15px;
+            color: white;
+            width: 100%; 
+        }
+    
+        .chat-bubble-bot-triangle-bot:before {
+            width: 10px;
+            height: 10px;
+            display: block;
+            content: '';
+            border: 15px solid transparent;
+            border-left-color: #3498db; /* Same color as the background */
+            border-bottom-color: #3498db; /* Same color as the background */
+        }
+
+        .chat-bubble-user-triangle-bot:before {
+            width: 10px;
+            height: 10px;
+            display: block;
+            content: '';
+            border: 15px solid transparent;
+            border-right-color: rgb(182, 182, 182); /* Same color as the background */
+            border-bottom-color: rgb(182, 182, 182); /* Same color as the background */
+        }
+
+        .chatBox {
+            min-height: 30px; 
+            border: none !important; 
+        }
+        
+        .chatdiv::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .chatdiv::-webkit-scrollbar-thumb {
+            background-color: #3498db; /* Blue color */
+            border-radius: 4px;
+        }
+
+        .chatdiv::-webkit-scrollbar-track {
+            background-color: rgba(0, 0, 0, 0.1); /* Transparent black background */
+            border-radius: 8px;
+        }
+
+        .chatdiv {
+            overflow-y: auto;
+            scrollbar-width: thin; /* For Firefox */
+            scrollbar-color: #3498db rgba(0, 0, 0, 0.1); /* For Firefox */
+        }
+
+        .loader {
+            border: 10px solid #f3f3f3; /* Light grey */
+            border-top: 10px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+    <div class="container mt-4 mb-2">
+        <h1>{{ question.title | safe }}</h1>
+        <p>{{ question.description | safe }}</p>
+        <p><strong>Goal:</strong> {{ question.goal | safe }}</p>
+
+        <div class="row mt-3">
+            <div class="col-md-8">
+                <h2>Source Code</h2>
+                <div id="sourceCode" style="height: 300px; border: solid 1px grey;"></div>
+                <button id="submitBtn" class="btn btn-success mt-3" onclick="submitSolution()">Submit Solution</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="chatdiv">
+        <div class="chatBox">
+            <div id="inputBox" class="d-flex">
+                <textarea id="chatInput" class="form-control mt-3" style="resize: none; height: 60px;" placeholder="Type your message"></textarea>
+                
+                <button class="btn btn-primary mt-3 ml-2" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script> 
+
+    <div style="position: fixed; bottom: 30px; right: 30px; display: flex; align-items: center; flex-direction: column;">
+        <div class="loader"></div>
+        <dotlottie-player src="https://lottie.host/d62e2f32-6b46-4a98-8382-d0380ac2c590/U0cPPbXVWD.json" background="transparent" speed="1" style="width: 200px; height: 200px; transform: scale(-1, 1);" loop autoplay></dotlottie-player>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/uuid.min.js') }}"></script>
+    
+    <script>
+        const chatId = uuidv4();
+
+        function loadMonacoEditor(callback) {
+            var loaderScript = document.createElement('script');
+            loaderScript.type = 'text/javascript';
+            loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
+            loaderScript.onload = callback;
+            document.head.appendChild(loaderScript);
+        }
+        
+        function initializeMonacoEditor() {
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+            require(['vs/editor/editor.main'], function () {
+                // Create a dummy element to use innerHTML for decoding
+                var dummyElement = document.createElement('div');
+                dummyElement.innerHTML = `{{ question.source_code | safe }}`;
+                
+                console.log(dummyElement.textContent || dummyElement.innerText)
+                
+                var sourceCodeEditor = monaco.editor.create(document.getElementById("sourceCode"), {
+                    value: dummyElement.textContent || dummyElement.innerText,
+                    language: "php", // Set the language based on your needs
+                    automaticLayout: true,
+                    theme: "vs-dark"
+                });
+                
+            });
+        }
+
+        function submitSolution() {
+            $('#submitBtn').prop('disabled', true);
+            showLoader();
+
+            var submittedCode = monaco.editor.getModels()[0].getValue();
+
+            $.ajax({
+                url: '/api/submit_code',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ code: submittedCode, chatId: chatId }),
+                success: async function (response) {
+                    var message = response.message;
+                    hideLoader();
+                    await botChatAppend(message);
+
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Congratulations!',
+                            text: 'You have completed the challenge by solving the vulnerability.',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = '/dashboard';
+                            }
+                        });
+                    }
+                },
+                error: function () {
+                    hideLoader();
+                    botChatAppend('Error occurred while submitting the code.');
+                },
+                complete: function () {
+                    hideLoader();
+                    $('#submitBtn').prop('disabled', false);
+                }
+            });
+        }
+
+        var chatDiv = $('.chatdiv')[0];
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+
+        $('#chatInput').keydown(function (e) {
+            if (e.key === 'Enter' && !e.ctrlKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        function initializeChatbot() {
+            showLoader();
+            $.ajax({
+                url: '/api/start_chat/{{ question.id }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ chatId: chatId }),
+                success: function (response) {
+                    hideLoader();
+                    var message = response.message;
+                    botChatAppend(message);
+                },
+                error: function () {
+                    hideLoader();
+                    botChatAppend('I think i have lost connection with the server, please check your internet');
+                }
+            })
+        }
+
+        function sendMessage() {
+            var message = $('#chatInput').val();
+            showLoader();
+
+            if (message.trim() !== '') {
+                userChatAppend(message);
+                $('#chatInput').val('');
+                $.ajax({
+                    url: '/api/send_chat',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message: message, chatId: chatId }),
+                    success: function (response) {
+                        hideLoader();
+                        var message = response.message;
+                        botChatAppend(message);
+                    },
+                    error: function () {
+                        hideLoader();
+                        botChatAppend('I think i have lost connection with the server, please check your internet');
+                    }
+                })
+            }
+        }
+
+        function userChatAppend(message) {
+            // Create a new user message element
+            var userMessage = $(
+                `<div class="chat-bubble">
+                    <div class="chat-bubble-user-triangle-bot"></div>
+                    <div class="chat-bubble-user">
+                        <div class="chatBox">
+                            ${escape(message)}
+                        </div>
+                    </div>
+                </div>`
+            );
+
+            // Find the d-flex div (message input) and insert the new user message before it
+            var dFlexDiv = $('#inputBox');
+            userMessage.insertBefore(dFlexDiv);
+
+            // Scroll the chat div to the bottom after adding a new message
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        async function botChatAppend(message) {
+            var chars = message.split('');
+
+            var botMessage = $(
+                `<div class="chat-bubble">
+                    <div class="chat-bubble-bot">
+                        <div class="chatBox"></div>
+                    </div>
+                    <div class="chat-bubble-bot-triangle-bot"></div>
+                </div>`
+            );
+
+            var dFlexDiv = $('#inputBox');
+            botMessage.insertBefore(dFlexDiv);
+
+            var chatBox = botMessage.find('.chatBox');
+
+            async function typeChar(index) {
+                if (index < chars.length) {
+                    chatBox.append(chars[index]);
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                    await typeChar(index + 1);
+                }
+            }
+
+            await typeChar(0);
+        }
+
+
+        function escape(string) {
+            var div = document.createElement('div');
+            var text = document.createTextNode(string);
+            div.appendChild(text);
+            return div.innerHTML;
+        }
+
+        function showLoader() {
+            $('.loader').show();
+        }
+
+        function hideLoader() {
+            $('.loader').hide();
+        }
+
+        loadMonacoEditor(initializeMonacoEditor);
+        initializeChatbot()
+    </script>
+
+{% endblock %}
